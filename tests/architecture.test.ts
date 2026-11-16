@@ -3,7 +3,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // Lowest layer first. A file may import only from its own layer or one listed before it.
-const LAYERS = ['lib', 'index', 'routes'];
+const LAYERS = ['lib', 'features/todos', 'index', 'routes'];
 
 const root = resolve(import.meta.dirname, '..');
 const src = join(root, 'src');
