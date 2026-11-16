@@ -9,7 +9,8 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: 0,
 	reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-	use: { baseURL: 'http://localhost:4173', trace: 'off' },
+	// A screenshot of every test, so CI can show each screen on each profile.
+	use: { baseURL: 'http://localhost:4173', trace: 'off', screenshot: 'on' },
 	webServer: {
 		command: 'npm run build && npm run preview -- --port 4173 --strictPort',
 		url: 'http://localhost:4173',
