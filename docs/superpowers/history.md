@@ -7,6 +7,12 @@
   `release` and `visual-check` skills), and set branch protection on `main` requiring the CI gate. Scope: those
   actions only, for the first setup. The owner created the repo themselves (this runtime cannot create repos).
   It does not cover later edits to the CI workflow or the rules files.
+- **2026-11-16, plan audit waiver.** Owner's choice on a decision card (16:22 UTC): the lane 3 plan audit is waived
+  for the setup pull request (#1) only, this once. The implementation audit still applies. Every later lane 3 change
+  gets its plan audit.
+- **2026-11-16, record keeping.** Owner's choice on a decision card (16:23 UTC, "Let the implementer write them"):
+  the implementer may write `progress.md` and `history.md` on the coordinator's behalf, because the coordinator has
+  no checkout of this repo. Standing until the owner changes it.
 
 ## Setup
 
@@ -33,8 +39,13 @@ Setup check run 2026-11-16 by the first session.
 
 - **2026-11-16, setup (PR #1), lane 3: the plan audit was skipped** by the implementer, who judged it adds nothing
   because the owner supplied the rules text and `release` fixes the setup steps. Found red by the implementation audit
-  (`docs/superpowers/audits/2026-11-16-1-implementation-audit.md`, finding 1). Owner decision: pending. PR #1 does not
-  merge until the owner waives it or a plan audit runs.
+  (`docs/superpowers/audits/2026-11-16-1-implementation-audit.md`, finding 1). Owner decision,
+  2026-11-16 16:22 UTC: waived for PR #1 only (decision card "Waive it this once"). See Standing permissions.
+
+- **2026-11-16, record keeping: the implementer wrote `progress.md` and `history.md`** while the coordinator was
+  active, against CLAUDE.md (The staged path, Writing). Found red by the implementation audit (finding 4). Owner
+  decision, 2026-11-16 16:23 UTC: allowed as a standing deviation while the coordinator has no checkout. See
+  Standing permissions.
 
 ## Approved screens
 
