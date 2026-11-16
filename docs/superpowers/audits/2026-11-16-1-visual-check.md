@@ -82,3 +82,55 @@ not broken. A layout change (Remove under the text on narrow screens, or a short
 
 N6. **Without JavaScript the page says "Getting your list…" forever.** The prerendered page ships the loading line, and
 nothing replaces it if scripts never run. Outside the brief's supported browsers, so a note only.
+
+## Last look
+
+- **Commit examined:** `11c245faa2a394ab41bd8e7ec259f1577b666962` on `todo-app` (PR #2), which carries the R1 fix. A
+  push that changes `src/` makes this look stale.
+- **Who and what:** step 3 of `visual-check`, by a fresh session that did not build or fix the screens. Judged against
+  PR #2's criteria 1 to 11, the drunk-grandma test and "no dead ends, every error says what to do next". Notes N1 to
+  N6 are known and were not re-judged.
+- **How:** `npm ci && npm run build && npm run preview -- --port 4173`, then a Playwright script on the three profiles
+  in `playwright.config.ts` (iPhone SE, iPad Mini, Desktop Chrome; Chromium), each in light and dark scheme: 6 runs,
+  8 screenshots each (empty, blank add, list with a tick, removed, keyboard focus, saving blocked after an add, storage
+  blocked on open, unreadable saved list). Emulation evidence, not real devices. The repo's own `npx playwright test`
+  also ran at this commit: 3 passed (small phone, tablet, computer), including the new blocked-saving step.
+- **Screenshots looked at:** every state on the small phone in both schemes, plus tablet and computer for the warning,
+  list and blank-add states. Copies of six are in the project files under `todo-app-previews/last-look/`.
+
+### Result
+
+**No red remains. R1 is fixed.** Every journey passed on all six runs, with no console or page errors.
+
+### R1 check
+
+The warning, shown both after an add with `Storage.prototype.setItem` throwing and on open with `localStorage`
+throwing, now reads: "This browser won't save your list. You can keep using it, but it will be gone when you close
+this page. To keep your list, open this page in a normal window, not a private one." It keeps the bad news, says the
+list still works, and gives one plain next step. Measured: the list kept working while blocked (the fifth item was
+added), and the whole warning sits inside the first screen on every profile (small phone: top 205 px, height 232 px,
+screen 568 px). It reads clearly in dark scheme too (`small-phone-dark-6-not-saving.png`). The fix touched only
+`TodoApp.svelte` and `tests/routes/page.e2e.ts`, as R1 allowed.
+
+### Re-walked on all three profiles, light and dark
+
+| Check | Result |
+|---|---|
+| Ready time (`data-ready-ms`, criterion 9, under 2000) | pass: 69 to 156 ms |
+| Blank add shows "Type something first, then press Add." | pass |
+| Add with Enter; box empties and keeps focus | pass |
+| Tick crosses out | pass |
+| Remove moves focus to "Put it back"; it restores the same place | pass |
+| Reload keeps all items and the tick | pass |
+| Every button at least 56 px tall (criterion 11) | pass: Add 60, the rest 56 |
+| Add visible without scrolling | pass: Add sits at y = 125 px |
+| Tab from the box lands on Add with the 4 px focus ring | pass |
+| Saving blocked after an add: warning with a next step, list still works | pass (was R1) |
+| Storage blocked on open: same warning, empty-state line under it | pass |
+| Unreadable saved list: warning, fresh list | pass |
+| No console or page errors | pass |
+
+### New findings
+
+None red. Nothing new beyond N1 to N6, which still show as described (for example N5's wrapping on the small phone in
+`small-phone-light-4-removed.png`).
