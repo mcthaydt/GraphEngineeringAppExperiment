@@ -139,6 +139,12 @@ jobs:
         run: npx playwright install --with-deps chromium
       - if: steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
+      - id: shard
+        name: Count the tests in this piece
+        run: |
+          count=$(npx playwright test --shard=${{ matrix.shard }}/6 --list --pass-with-no-tests | grep -cE '^\s+\[' || true)
+          echo "Tests in this piece: $count"
+          echo "has_tests=$([ "$count" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - name: Browser tests
         env:
           QUICK: ${{ needs.changes.outputs.full != 'true' }}
@@ -147,12 +153,13 @@ jobs:
           if [ "$QUICK" = true ]; then extra="-x"; fi
           npx playwright test --shard=${{ matrix.shard }}/6 --pass-with-no-tests $extra
       - name: Screenshots
-        if: always() && needs.changes.outputs.screens == 'true'
+        # A piece that ran tests on a screen change must leave screenshots behind.
+        if: always() && needs.changes.outputs.screens == 'true' && steps.shard.outputs.has_tests == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-shard-${{ matrix.shard }}
-          path: test-results/
-          if-no-files-found: ignore
+          path: test-results/**/*.png
+          if-no-files-found: error
           retention-days: 14
 
   gate:
