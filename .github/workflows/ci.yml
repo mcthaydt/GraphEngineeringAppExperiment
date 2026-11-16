@@ -1,0 +1,185 @@
+name: CI
+
+on:
+  pull_request:
+    # ready_for_review is not a default type; it starts the full run the merge gate counts.
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: decide checks
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.decide.outputs.code }}
+      full: ${{ steps.decide.outputs.full }}
+      screens: ${{ steps.decide.outputs.screens }}
+      base: ${{ steps.decide.outputs.base }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            files=$(git ls-files)
+          else
+            files=$(git diff --name-only "$base"...HEAD)
+          fi
+          echo "Changed files:"; echo "$files"
+
+          # Plain .md docs skip the code checks; rules files are .md but bring every check back.
+          code=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              CLAUDE.md|.claude/*) code=true ;;
+              *.md) ;;
+              *) code=true ;;
+            esac
+          done <<< "$files"
+
+          # Lockfile and build/test config make even a draft run everything.
+          full=false
+          if [ "$EVENT" != pull_request ] || [ "$DRAFT" != true ]; then full=true; fi
+          if grep -qE '^(package(-lock)?\.json|vite\.config\.ts|playwright\.config\.ts|tsconfig\.json|eslint\.config\.js|\.github/workflows/)' <<< "$files"; then full=true; fi
+
+          # Screen files: anything a person looks at.
+          screens=false
+          if grep -qE '(\.svelte$|^src/app\.(html|css)$|^static/|^tests/.*\.e2e\.ts$)' <<< "$files"; then screens=true; fi
+
+          { echo "code=$code"; echo "full=$full"; echo "screens=$screens"; echo "base=$base"; } | tee -a "$GITHUB_OUTPUT"
+
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+
+  unit:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Full run
+        if: needs.changes.outputs.full == 'true'
+        run: npx vitest run
+      - name: Quick run (only the tests the change reaches)
+        if: needs.changes.outputs.full != 'true'
+        run: npx vitest run --changed "${{ needs.changes.outputs.base }}" --bail 1 --passWithNoTests
+
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && (needs.changes.outputs.full == 'true' || needs.changes.outputs.screens == 'true')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Browser tests
+        env:
+          QUICK: ${{ needs.changes.outputs.full != 'true' }}
+        run: |
+          extra=""
+          if [ "$QUICK" = true ]; then extra="-x"; fi
+          npx playwright test --shard=${{ matrix.shard }}/6 --pass-with-no-tests $extra
+      - name: Screenshots
+        if: always() && needs.changes.outputs.screens == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-shard-${{ matrix.shard }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  gate:
+    name: gate
+    needs: [changes, lint, typecheck, build, unit, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every applicable check passed, every other one was marked not applicable
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          node <<'JS'
+          const needs = JSON.parse(process.env.NEEDS);
+          const fail = (msg) => { console.log(`::error::${msg}`); process.exitCode = 1; };
+          if (needs.changes.result !== 'success') { fail(`decide checks: ${needs.changes.result}`); process.exit(); }
+          const o = needs.changes.outputs;
+          const code = o.code === 'true';
+          const applies = {
+            lint: code, typecheck: code, build: code, unit: code,
+            e2e: code && (o.full === 'true' || o.screens === 'true'),
+          };
+          console.log(`mode: ${o.full === 'true' ? 'full' : 'quick'}, code: ${o.code}, screens: ${o.screens}`);
+          for (const [job, applicable] of Object.entries(applies)) {
+            const result = needs[job].result;
+            const want = applicable ? 'success' : 'skipped';
+            console.log(`${job}: ${applicable ? 'applies' : 'not applicable'}, result ${result}`);
+            if (result !== want) fail(`${job} should be ${want} but was ${result}`);
+          }
+          JS
