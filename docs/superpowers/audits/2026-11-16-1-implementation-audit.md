@@ -151,3 +151,44 @@ body only.
 
 The implementer skipped the separate lane 3 plan audit and told the owner in the thread that it was recorded as a
 deviation. It is not recorded in any committed file or in the PR body. See red finding 1.
+
+## Fix check, round 1 (commit `b5e77dfd88164e2df05211da976473a63b1241c3`)
+
+Checked by this audit session, not the implementer. Diff `147c49c..b5e77df`: `.github/workflows/ci.yml`,
+`playwright.config.ts`, `src/index.ts`, `docs/superpowers/progress.md`, `docs/superpowers/history.md`, plus the PR
+body. At `b5e77df`: `npm run lint`, `npm run check`, `npm test` (4 of 4) and `npm run build` exit 0; `npm run test:e2e`
+exits 1 ("No tests found"), as the reworded criterion now says. CI on `b5e77df`: all 12 checks green.
+
+| Finding | Verdict | Evidence |
+|---|---|---|
+| 1. Plan audit skipped | **open**, waits on the owner | Now recorded under "Deviations" in `history.md` and in the PR body, with "Owner decision: pending" and "this PR does not merge until then". The decision itself has not been made. |
+| 2. `test:e2e` exits 1 | **pass** | PR criterion 2 now says `test:e2e` exits 1 until #2 adds the Playwright test and why CI uses `--pass-with-no-tests`; `history.md` Setup says the same. Measured: exit 1 at `b5e77df`, matching the text. The script was not loosened. |
+| 3. Screenshots never taken | **pass** | `playwright.config.ts` sets `screenshot: 'on'`; the upload takes `test-results/**/*.png` with `if-no-files-found: error`, only for pieces that hold tests. Checked with a temporary `tests/routes/page.e2e.ts` (removed after): the count step gives 1, 1, 1, 0, 0, 0 across the 6 pieces (0 handled without a shell error), and piece 1 wrote `test-results/routes-page.e2e.ts-shows-the-heading-small-phone/test-finished-1.png`. |
+| 4. Implementer writes `progress.md` and `history.md` | **still red** | The content corrections are right (e2e status, branch protection, deviation, cleared blocker). But `b5e77df` is again the implementer writing both files, now "as the coordinator's delegate; the coordinator has no checkout". CLAUDE.md makes the coordinator the only writer "including for delegated short-path work", so delegation does not satisfy the rule. New in this round: `progress.md` says "Last updated: 2026-11-16 16:25 UTC", but the commit is dated 16:19:32 UTC. The time was written by hand and is later than the commit, against "Hashes, sizes and timings are measured, never written by hand". |
+| 5. PR body footer | **pass** | The PR body's last line is `Requested by **The Realest Alive**`; no Claude Code line remains. |
+| Note 8. `import './lib';` | **resolved** | Removed from `src/index.ts`; the architecture test still passes. The line was already present at `7222d58`, so it shipped in the audited commit. |
+
+### Finding 4, round 2
+
+UNIT: `docs/superpowers/progress.md`, `docs/superpowers/history.md`.
+VERDICT: red
+REQUIREMENT: CLAUDE.md, The staged path, Writing (the coordinator is the only writer while active, including for
+delegated work); project instructions (same rule); Report honestly ("timings are measured, never written by hand").
+REASON: the writer rule cannot be met as things stand, because the coordinator has no checkout, and the stamp in
+`progress.md` was typed by hand.
+EVIDENCE: `git log -1 --format=%an b5e77df` gives mcthaydt, from the implementer's session (its commit message says
+"as the coordinator's delegate"); the commit date is `2026-11-16T16:19:32+00:00` against the "16:25 UTC" stamp.
+EXPECTED: either the coordinator writes these files, or the owner records that the implementer may write them for the
+coordinator while it has no checkout, as a deviation with its scope. The last-updated time is taken from the clock when
+the file is written.
+FIX: needs the owner's choice. Options: (a) record a deviation under "Deviations" in `history.md` letting the implementer
+write `progress.md` and `history.md` on the coordinator's instruction while the coordinator has no checkout
+(recommended: the CLAUDE.md "Reporting" rule treats a missing tool replaced by an authorized alternative as a
+deviation, not a stop); (b) give the coordinator a checkout and let it take the files over. Either way, replace
+"16:25 UTC" with the measured time (`date -u`) in the same commit. Files: `docs/superpowers/progress.md`,
+`docs/superpowers/history.md`.
+
+### Result after round 1
+
+2 red still open: finding 1 (the owner's choice on the plan audit) and finding 4 (the owner's choice on who writes
+the records, plus the hand-written time). Findings 2, 3 and 5 pass at `b5e77df`. PR #1 is not ready to merge.
