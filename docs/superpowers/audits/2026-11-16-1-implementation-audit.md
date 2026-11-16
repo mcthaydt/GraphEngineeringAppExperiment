@@ -192,3 +192,32 @@ deviation, not a stop); (b) give the coordinator a checkout and let it take the 
 
 2 red still open: finding 1 (the owner's choice on the plan audit) and finding 4 (the owner's choice on who writes
 the records, plus the hand-written time). Findings 2, 3 and 5 pass at `b5e77df`. PR #1 is not ready to merge.
+
+## Fix check, round 2 (commit `381e8f2609efb973e8a7c62db916511d35c6e180`)
+
+Diff `e800e14..381e8f2`: `docs/superpowers/history.md` and `docs/superpowers/progress.md` only. I checked the owner's
+decisions in the project chat directly, not through the coordinator's summary.
+
+| Finding | Verdict | Evidence |
+|---|---|---|
+| 1. Plan audit skipped | **pass** (waived by the owner) | Decision card "The setup PR skipped its plan audit ... Should it go ahead without one?" was answered "Waive it this once" by the owner's account at 16:22:20 UTC. `history.md` records it under Standing permissions ("waived for the setup pull request (#1) only, this once ... Every later lane 3 change gets its plan audit") and under Deviations, with the same 16:22 UTC time. The scope matches the card. |
+| 4. Who writes `progress.md` and `history.md`, hand-written time | **pass** (allowed by the owner) | Decision card "Can the implementer write them for me?" was answered "Let the implementer write them" ("Recorded as a standing deviation, with real clock times") by the owner's account at 16:23:15 UTC. `history.md` records it under Standing permissions and Deviations at 16:23 UTC. The `progress.md` stamp now reads "2026-11-16 16:23 UTC", and the commit is dated `2026-11-16T16:23:42+00:00`: same minute, not ahead of the commit. |
+
+### Notes from round 2 (not blocking)
+
+1. **The PR body is stale.** Its Audit section still says red 1 "waits on the owner's choice: this PR does not merge
+   until then". Update it to name the waiver, this audit's final commit and the result before merging.
+2. **The record-keeping scope is worded two ways.** Standing permissions says "Standing until the owner changes it";
+   Deviations says "while the coordinator has no checkout". The owner's card said only "a standing deviation". The
+   two readings agree for now. Pick one wording at the next edit.
+3. **`progress.md` Blockers** says PR #1 waits on this re-check. That is true as of 16:23 and is cleared by this
+   commit.
+4. **CI on `381e8f2`** was queued when this was written: the PR is now marked ready, so this is the full run the merge
+   gate counts. This audit does not cover CI. The merge still needs `gate` green on the head commit.
+
+### Result after round 2
+
+No red findings remain open at `381e8f2`. Findings 2, 3 and 5 passed at `b5e77df` and are unchanged by `381e8f2`
+(it touches only the two records). Findings 1 and 4 pass on the owner's recorded decisions. From this audit's side,
+PR #1 can merge once the full CI run on its head is green. Any later push other than this audit file makes this
+audit stale.
