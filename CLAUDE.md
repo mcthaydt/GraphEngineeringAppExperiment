@@ -144,7 +144,7 @@ tooling for this. The plan names any other lane 2 or 3 unit up front. The highes
   deleting a merged branch, an isolated change with coverage. Merges on green.
 - **Lane 2**, wide: `src/lib/`, `src/index.ts`, `src/app.html`, `src/routes/+layout.*`, `package.json`, `package-lock.json`, `vite.config.ts`, `tsconfig.json`, `eslint.config.js`, `playwright.config.ts`, shared code many callers use, a schema, or config. Merges after `release`'s extra
   checks.
-- **Lane 3**, hard to undo: `tests/golden/` moves that no approved change explains, the saved-list storage key and format in `src/features/todos/library/` (a change can lose people's saved lists), credentials,
+- **Lane 3**, hard to undo: `tests/golden/` moves that no approved change explains, a change to the saved-list storage key or format in `src/features/todos/library/` once it has shipped (it can lose people's saved lists), credentials,
   money, device actions with consequential side effects, release approvals and tags, CI workflow files, deleting
   anything git cannot restore, any migration, any write of real data, and a change to the rules that decide what needs
   the owner (CLAUDE.md and the skills, even though they are `.md` files). Requires its lane's checks and reviews plus
