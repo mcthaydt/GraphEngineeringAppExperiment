@@ -58,4 +58,19 @@ test('add, tick off, remove and put back a todo, and keep them after a reload', 
 	await putBack.click();
 	await expect(items).toHaveText([/Buy milk/, /Call Mum/]);
 	await expect(box).toBeFocused();
+
+	// When the browser refuses to save, the warning says what still works and what to do.
+	await page.evaluate(() => {
+		Storage.prototype.setItem = () => {
+			throw new Error('QuotaExceededError');
+		};
+	});
+	await box.fill('Pay the gas bill');
+	await addButton.click();
+	await expect(items).toHaveText([/Buy milk/, /Call Mum/, /Pay the gas bill/]);
+	await expect(page.getByRole('alert')).toHaveText(
+		"This browser won't save your list. You can keep using it, but it will be gone when you close this page. " +
+			'To keep your list, open this page in a normal window, not a private one.'
+	);
+	await page.screenshot({ path: testInfo.outputPath('4-not-saving.png'), fullPage: true });
 });

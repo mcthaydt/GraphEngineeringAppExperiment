@@ -87,7 +87,8 @@
 
 	{#if loadProblem === 'unavailable' || saveFailed}
 		<p class="warning" role="alert">
-			This browser won't let us save your list. It will be gone when you close this page.
+			This browser won't save your list. You can keep using it, but it will be gone when you close this page.
+			To keep your list, open this page in a normal window, not a private one.
 		</p>
 	{:else if loadProblem === 'unreadable'}
 		<p class="warning" role="alert">
