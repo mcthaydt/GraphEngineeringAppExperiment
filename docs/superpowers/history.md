@@ -44,7 +44,7 @@ Setup check run 2026-11-16 by the first session.
 
 - **2026-11-16, record keeping: the implementer wrote `progress.md` and `history.md`** while the coordinator was
   active, against CLAUDE.md (The staged path, Writing). Found red by the implementation audit (finding 4). Owner
-  decision, 2026-11-16 16:23 UTC: allowed as a standing deviation while the coordinator has no checkout. See
+  decision, 2026-11-16 16:23 UTC: allowed as a standing deviation until the owner changes it. See
   Standing permissions.
 
 ## Approved screens
